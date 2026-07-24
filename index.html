@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Turnero · Panel del comercio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDEBF3;--card:#FFFFFF;--ink:#181725;--ink2:#605D75;--ink3:#908CA5;
+  --line:#DCD8E8;--accent:#4B3BE0;--accent-soft:#EBE8FF;
+  --danger:#C43C5C;--danger-soft:#FBE7EC;--ok:#0E8F6E;--ok-soft:#E2F5EF;
+  --r:14px;--pad:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Inter Tight',system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.45;padding-bottom:calc(76px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
+h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;letter-spacing:-.02em;margin:0}
+button{font-family:inherit;font-size:inherit;border:0;background:none;color:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
+.wrap{max-width:560px;margin:0 auto;padding:0 var(--pad)}
+
+header{position:sticky;top:0;z-index:40;background:var(--bg);padding-top:calc(12px + env(safe-area-inset-top));
+  border-bottom:1px solid transparent;transition:border-color .2s}
+header.scrolled{border-color:var(--line)}
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-bottom:10px}
+.hd h1{font-size:20px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none;scroll-snap-type:x proximity}
+.strip::-webkit-scrollbar{display:none}
+.strip .wrapEdge{flex:0 0 var(--pad)}
+.day{flex:0 0 auto;width:52px;padding:8px 0 9px;border-radius:12px;background:var(--card);text-align:center;
+  border:1px solid var(--line);scroll-snap-align:center;position:relative}
+.day .dw{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);font-weight:600}
+.day .dn{font-size:19px;font-weight:700;line-height:1.2}
+.day.closed{opacity:.42}
+.day.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.day.on .dw{color:#B9B4D6}
+.day .pip{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.day.on .pip{background:#fff}
+
+.summary{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tag{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--ink2)}
+.tag b{font-family:'JetBrains Mono',monospace}
+.tag.a{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.tag.b{background:#E4E2EC;border-color:transparent;color:var(--ink2)}
+
+.slots{display:flex;flex-direction:column;gap:8px}
+.slot{position:relative;display:grid;grid-template-columns:66px 1fr;background:var(--card);
+  border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+.slot .t{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:14px 0;border-right:1px dashed var(--line)}
+.slot .t .hh{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;letter-spacing:-.02em}
+.slot .t .dur{font-size:10px;color:var(--ink3)}
+.slot::before,.slot::after{content:'';position:absolute;left:66px;width:12px;height:12px;border-radius:50%;
+  background:var(--bg);transform:translate(-50%,-50%);z-index:2}
+.slot::before{top:0}
+.slot::after{top:100%}
+.slot .body{padding:11px 12px 11px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.slot .title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.slot .meta{font-size:12.5px;color:var(--ink2);line-height:1.35;word-break:break-word}
+.slot .meta b{color:var(--ink);font-weight:600}
+.rail{position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent}
+.slot.libre .rail{background:#D8D4E6}
+.slot.reservado{border-color:#C9C2FA}
+.slot.reservado .rail{background:var(--accent)}
+.slot.bloqueado{background:repeating-linear-gradient(135deg,#F1EFF6 0 7px,#E7E4EF 7px 14px)}
+.slot.bloqueado .rail{background:#A8A3BC}
+.slot.bloqueado .t{color:var(--ink3)}
+.slot.pasado{opacity:.5}
+.slot.cancelado{border-color:#F0CBD5}
+.slot.cancelado .rail{background:var(--danger)}
+.chip{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2.5px 7px;border-radius:6px}
+.chip.r{background:var(--accent-soft);color:var(--accent)}
+.chip.b{background:#E2DFEB;color:var(--ink2)}
+.chip.c{background:var(--danger-soft);color:var(--danger)}
+
+.acts{display:flex;gap:7px;flex-wrap:wrap}
+.btn{font-size:13px;font-weight:600;padding:7px 12px;border-radius:9px;background:#F2F0F7;color:var(--ink);
+  border:1px solid var(--line);white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.v{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.d{background:var(--danger-soft);color:var(--danger);border-color:#F0CBD5}
+.btn.g{background:var(--ok-soft);color:var(--ok);border-color:#BFE8DA}
+.btn.full{width:100%;text-align:center;padding:12px}
+.btn[disabled]{opacity:.45}
+
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:var(--r);padding:26px 20px;
+  text-align:center;color:var(--ink2);font-size:14px}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px;font-family:'Bricolage Grotesque',sans-serif}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card h3{font-size:15px;margin-bottom:3px}
+.card .hint{font-size:12.5px;color:var(--ink2);margin-bottom:12px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#FAF9FC}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;background:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.dayrow{border-top:1px solid var(--line);padding:12px 0}
+.dayrow:first-of-type{border-top:0}
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dayhead .nm{font-weight:600;font-size:14.5px}
+.sw{width:44px;height:26px;border-radius:99px;background:#DEDAE9;position:relative;transition:background .18s;flex:0 0 auto}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+  transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw.on{background:var(--ok)}
+.sw.on::after{transform:translateX(18px)}
+.ranges{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+.range{display:flex;align-items:center;gap:7px}
+.range input{flex:1;padding:8px 9px;border:1px solid var(--line);border-radius:9px;background:#FAF9FC;
+  font-family:'JetBrains Mono',monospace;font-size:14px;text-align:center}
+.range .to{font-size:12px;color:var(--ink3)}
+.x{width:30px;height:30px;border-radius:8px;background:#F2F0F7;color:var(--ink3);font-size:17px;line-height:1;flex:0 0 auto}
+.addr{font-size:12.5px;font-weight:600;color:var(--accent);padding:5px 0}
+
+.srv{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;border-top:1px solid var(--line);padding:12px 0}
+.srv:first-of-type{border-top:0}
+.srv input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#FAF9FC;font-size:15px}
+.srv .sub{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:7px}
+.srv .sub select,.srv .sub input{padding:8px 9px;border:1px solid var(--line);border-radius:9px;background:#FAF9FC;font-size:14px;width:100%}
+
+.blist{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.bpill{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;background:#F2F0F7;
+  border:1px solid var(--line);padding:6px 8px 6px 11px;border-radius:9px}
+.bpill button{color:var(--ink3);font-size:16px;line-height:1}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav .inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav button{padding:10px 4px 11px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink3);
+  font-size:10.5px;font-weight:600}
+nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--accent)}
+
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(24,23,37,.45);display:none;align-items:flex-end;justify-content:center}
+.scrim.open{display:flex}
+.sheet{width:100%;max-width:560px;background:var(--bg);border-radius:20px 20px 0 0;
+  padding:8px var(--pad) calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+.grab{width:38px;height:4px;border-radius:99px;background:var(--line);margin:6px auto 14px}
+.sheet h2{font-size:18px;margin-bottom:3px}
+.sheet .sub{font-size:13px;color:var(--ink2);margin-bottom:14px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.rchip{font-size:13px;font-weight:600;padding:8px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line)}
+.rchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.preview{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;
+  line-height:1.5;white-space:pre-wrap;color:var(--ink2);margin-bottom:12px}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(12px);
+  background:var(--ink);color:#fff;font-size:13.5px;font-weight:500;padding:10px 16px;border-radius:11px;z-index:80;
+  opacity:0;pointer-events:none;transition:.22s;max-width:88vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.view{display:none}
+.view.on{display:block}
+
+#gate{position:fixed;inset:0;z-index:90;background:var(--bg);overflow-y:auto;display:none;
+  padding:calc(28px + env(safe-area-inset-top)) 0 40px}
+#gate.on{display:block}
+#gate .logo{width:46px;height:46px;border-radius:13px;background:var(--ink);color:#fff;display:flex;
+  align-items:center;justify-content:center;font-family:'Bricolage Grotesque';font-weight:800;font-size:20px;margin-bottom:16px}
+#gate h2{font-size:23px;margin-bottom:6px}
+#gate p.lead{color:var(--ink2);font-size:14px;margin:0 0 20px}
+#gate code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:#E4E2EC;padding:1px 5px;border-radius:5px}
+.err{background:var(--danger-soft);border:1px solid #F0CBD5;color:var(--danger);font-size:13px;font-weight:500;
+  padding:10px 12px;border-radius:10px;margin-bottom:12px}
+.sync{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--ink3)}
+.sync .dot{width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.sync.off .dot{background:var(--ink3)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="gate" class="on"><div class="wrap" id="gateBody"></div></div>
+
+<header id="hdr">
+  <div class="wrap hd">
+    <div>
+      <div class="eyebrow">Panel · <span class="sync off" id="sync"><span class="dot"></span><span id="syncTxt">conectando</span></span></div>
+      <h1 id="bizName">Mi comercio</h1>
+    </div>
+    <button class="btn" id="btnToday">Hoy</button>
+  </div>
+  <div class="strip" id="strip"></div>
+</header>
+
+<main>
+  <section class="view on" id="v-agenda">
+    <div class="wrap">
+      <div class="summary" id="summary"></div>
+      <div class="slots" id="slots"></div>
+      <div style="height:10px"></div>
+      <button class="btn full" id="btnBlockDay">Bloquear todo el día</button>
+      <div style="height:8px"></div>
+      <button class="btn full p" id="btnNewApt">Cargar turno manual</button>
+      <div style="height:24px"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-horarios">
+    <div class="wrap">
+      <div class="card">
+        <h3>Duración de los turnos</h3>
+        <div class="hint">Define cada cuánto se genera un turno disponible.</div>
+        <div class="row2">
+          <div class="field" style="margin:0"><label>Cada turno dura</label>
+            <select id="cfgDur">
+              <option value="15">15 minutos</option><option value="20">20 minutos</option>
+              <option value="30">30 minutos</option><option value="45">45 minutos</option>
+              <option value="60">1 hora</option><option value="90">1 hora 30</option>
+            </select></div>
+          <div class="field" style="margin:0"><label>Reservas hasta</label>
+            <select id="cfgAnt"><option value="7">7 días</option><option value="14">14 días</option>
+              <option value="30">30 días</option><option value="60">60 días</option></select></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Días y horarios de atención</h3>
+        <div class="hint">Activá los días que trabajás y cargá uno o más rangos por día.</div>
+        <div id="daysCfg"></div>
+      </div>
+      <div class="card">
+        <h3>Días cerrados</h3>
+        <div class="hint">Feriados, vacaciones o cualquier fecha puntual sin atención.</div>
+        <div class="field" style="margin:0"><label>Agregar fecha</label><input type="date" id="addBlockDate"></div>
+        <div class="blist" id="blockedList"></div>
+      </div>
+      <div style="height:24px"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-servicios">
+    <div class="wrap">
+      <div class="card">
+        <h3>Servicios</h3>
+        <div class="hint">Es lo que el cliente elige al pedir el turno. Si un servicio lleva más tiempo, ocupa varios turnos seguidos.</div>
+        <div id="srvList"></div>
+        <button class="addr" id="btnAddSrv">+ Agregar servicio</button>
+      </div>
+      <div style="height:24px"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-ajustes">
+    <div class="wrap">
+      <div class="card">
+        <h3>Datos del comercio</h3>
+        <div class="hint">Aparecen en los mensajes que se envían al cliente.</div>
+        <div class="field"><label>Nombre</label><input type="text" id="setName" placeholder="Estética Luna"></div>
+        <div class="field"><label>WhatsApp del comercio</label><input type="tel" id="setPhone" placeholder="3624 000000"></div>
+        <div class="field" style="margin:0"><label>Link de la app del cliente</label>
+          <input type="url" id="setUrl" placeholder="https://usuario.github.io/turnero-cliente/"></div>
+      </div>
+      <div class="card">
+        <h3>Cuenta</h3>
+        <div class="hint" id="acctMail">—</div>
+        <button class="btn full" id="btnOut">Cerrar sesión</button>
+      </div>
+      <div class="card">
+        <h3>Respaldo</h3>
+        <div class="hint">Los datos viven en Firestore. Aun así conviene bajar una copia cada tanto.</div>
+        <button class="btn full" id="btnExport" style="margin-bottom:8px">Exportar datos (.json)</button>
+        <button class="btn full" id="btnRebuild">Reconstruir disponibilidad</button>
+        <div class="hint" style="margin:8px 0 0">Usalo solo si la app del cliente muestra horarios que en realidad están tomados.</div>
+      </div>
+      <div style="height:24px"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <div class="inner">
+    <button data-tab="agenda" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Agenda</button>
+    <button data-tab="horarios"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horarios</button>
+    <button data-tab="servicios"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Servicios</button>
+    <button data-tab="ajustes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.2a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 0z"/></svg>Ajustes</button>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+/* =====================================================================
+   1) CONFIGURACIÓN DE FIREBASE  ←  PEGÁ ACÁ TUS DATOS
+   Consola de Firebase → ⚙ Configuración del proyecto → Tus apps → Web
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAFCFH4hByY9R3WRf3TLSKX7GJf1IkwUsw",
+  authDomain: "turnero-8ce05.firebaseapp.com",
+  projectId: "turnero-8ce05",
+  storageBucket: "turnero-8ce05.firebasestorage.app",
+  messagingSenderId: "719367022171",
+  appId: "1:719367022171:web:95b706c59f4906fafd417e"
+};
+/* ===================================================================== */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager,
+  doc, setDoc, deleteDoc, getDoc, getDocs, updateDoc, collection, onSnapshot, query, where, deleteField }
+  from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
+/* ================= HELPERS ================= */
+const $=s=>document.querySelector(s);
+const DOW=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DOW3=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const toMin=t=>{const[h,m]=t.split(':').map(Number);return h*60+m};
+const toHM=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const parseISO=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const fmtLargo=s=>{const d=parseISO(s);return DOW[d.getDay()]+' '+d.getDate()+' de '+MES[d.getMonth()]};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const focusIn=sel=>{const c=$(sel);return c&&document.activeElement&&c.contains(document.activeElement)};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove('on'),2200)}
+function waLink(tel,txt){
+  let d=String(tel||'').replace(/\D/g,'');
+  if(d.startsWith('0'))d=d.slice(1);
+  if(d.length===10)d='549'+d;
+  else if(d.length===11&&d.startsWith('9'))d='54'+d;
+  else if(!d.startsWith('54')&&d.length>=10)d='54'+d;
+  return 'https://wa.me/'+d+'?text='+encodeURIComponent(txt);
+}
+function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}
+
+/* ================= ESTADO LOCAL (espejo de Firestore) ================= */
+const DIAS_DEFECTO=(()=>{const d={};for(let i=0;i<7;i++)d[i]=(i>=1&&i<=5)?[{de:'09:00',a:'13:00'},{de:'16:00',a:'20:00'}]:(i===6?[{de:'09:00',a:'14:00'}]:[]);return d})();
+let S={
+  negocio:{nombre:'Mi comercio',telefono:'',url:''},
+  agenda:{duracion:30,anticipacion:30,dias:DIAS_DEFECTO},
+  bloqueos:{slots:[],dias:[]},
+  servicios:[],
+  turnos:[]
+};
+let sel=iso(new Date());
+let db=null,auth=null,listos=0,sembrado=false;
+
+/* ================= ESCRITURAS ================= */
+function errW(e){console.error(e);toast('No se pudo guardar: '+(e.code||e.message))}
+const pushNegocio=debounce(()=>setDoc(doc(db,'config','negocio'),S.negocio).catch(errW),500);
+const pushAgenda=debounce(()=>setDoc(doc(db,'config','agenda'),S.agenda).catch(errW),300);
+const pushBloqueos=()=>setDoc(doc(db,'config','bloqueos'),S.bloqueos).catch(errW);
+const pushServicio=debounce(s=>setDoc(doc(db,'servicios',s.id),
+  {nombre:s.nombre,duracion:s.duracion,precio:s.precio,activo:s.activo,orden:s.orden||0}).catch(errW),400);
+
+/* ---- disponibilidad pública: lo único que ve la app del cliente ---- */
+function idTurno(fecha,hora){return fecha+'_'+hora.replace(':','')}
+function ocuparSlots(fecha,slots){
+  const add={};slots.forEach(h=>add[h]=true);
+  return setDoc(doc(db,'ocupacion',fecha),add,{merge:true});
+}
+function liberarSlots(fecha,slots){
+  const del={};slots.forEach(h=>del[h]=deleteField());
+  return setDoc(doc(db,'ocupacion',fecha),del,{merge:true});
+}
+async function reconstruirDisponibilidad(){
+  const snap=await getDocs(collection(db,'turnos'));
+  const porFecha={};
+  snap.docs.forEach(d=>{
+    const t=d.data();if(t.estado!=='reservado')return;
+    porFecha[t.fecha]=porFecha[t.fecha]||{};
+    slotsQueOcupa(t).forEach(h=>porFecha[t.fecha][h]=true);
+  });
+  const fechas=new Set(Object.keys(porFecha));
+  (await getDocs(collection(db,'ocupacion'))).docs.forEach(d=>fechas.add(d.id));
+  for(const f of fechas)await setDoc(doc(db,'ocupacion',f),porFecha[f]||{});
+  toast('Disponibilidad reconstruida');
+}
+
+/* ================= LÓGICA DE TURNOS ================= */
+function servicio(id){return S.servicios.find(s=>s.id===id)||{nombre:'Servicio',duracion:0}}
+function durServicio(id){const s=servicio(id);return s.duracion&&s.duracion>0?s.duracion:S.agenda.duracion}
+function slotsQueOcupa(t){
+  const base=S.agenda.duracion,n=Math.max(1,Math.ceil(durServicio(t.servicioId)/base)),out=[];
+  for(let i=0;i<n;i++)out.push(toHM(toMin(t.hora)+i*base));
+  return out;
+}
+function turnosDe(f){return S.turnos.filter(t=>t.fecha===f&&t.estado==='reservado')}
+function diaCerrado(f){return S.bloqueos.dias.includes(f)}
+function generarSlots(fecha){
+  const d=parseISO(fecha),rangos=S.agenda.dias[d.getDay()]||[],base=S.agenda.duracion,horas=[];
+  rangos.forEach(r=>{const ini=toMin(r.de),fin=toMin(r.a);for(let m=ini;m+base<=fin;m+=base)horas.push(toHM(m))});
+  horas.sort();
+  const ocupados={};
+  turnosDe(fecha).forEach(t=>slotsQueOcupa(t).forEach((h,i)=>ocupados[h]={turno:t,cont:i>0}));
+  const cerrado=diaCerrado(fecha),ahora=new Date(),hoy=iso(ahora),minAhora=ahora.getHours()*60+ahora.getMinutes();
+  return horas.map(h=>{
+    const oc=ocupados[h],bloq=cerrado||S.bloqueos.slots.includes(fecha+'|'+h);
+    const pasado=fecha<hoy||(fecha===hoy&&toMin(h)<minAhora);
+    return {hora:h,pasado,estado:oc?(oc.cont?'cont':'reservado'):(bloq?'bloqueado':'libre'),turno:oc?oc.turno:null};
+  });
+}
+
+/* ================= RENDER ================= */
+function renderStrip(){
+  const c=$('#strip'),hoy=new Date();let h='<div class="wrapEdge"></div>';
+  for(let i=0;i<Math.min(S.agenda.anticipacion,21);i++){
+    const d=new Date(hoy);d.setDate(hoy.getDate()+i);
+    const f=iso(d),cerrado=diaCerrado(f)||!(S.agenda.dias[d.getDay()]||[]).length,n=turnosDe(f).length;
+    h+=`<button class="day ${f===sel?'on':''} ${cerrado?'closed':''}" data-d="${f}">
+      <div class="dw">${DOW3[d.getDay()]}</div><div class="dn">${d.getDate()}</div>${n?'<span class="pip"></span>':''}</button>`;
+  }
+  c.innerHTML=h+'<div class="wrapEdge"></div>';
+  const on=c.querySelector('.day.on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+}
+function renderAgenda(){
+  const slots=generarSlots(sel);
+  const libres=slots.filter(s=>s.estado==='libre'&&!s.pasado).length;
+  const res=slots.filter(s=>s.estado==='reservado').length;
+  const bloq=slots.filter(s=>s.estado==='bloqueado').length;
+  const canc=S.turnos.filter(t=>t.fecha===sel&&t.estado==='cancelado').length;
+  $('#summary').innerHTML=`<span class="tag">${fmtLargo(sel)}</span>`+
+    (slots.length?`<span class="tag a"><b>${res}</b> reservados</span><span class="tag"><b>${libres}</b> libres</span>`+
+      (bloq?`<span class="tag b"><b>${bloq}</b> bloqueados</span>`:''):'')+
+    (canc?`<span class="tag b"><b>${canc}</b> cancelados</span>`:'');
+  $('#btnBlockDay').textContent=diaCerrado(sel)?'Reabrir este día':'Bloquear todo el día';
+
+  const box=$('#slots');
+  if(!slots.length){
+    box.innerHTML=`<div class="empty"><b>Sin horarios para este día</b>Cargá los rangos de atención en la solapa Horarios, o elegí otra fecha.</div>`;
+    renderCancelados(box);return;
+  }
+  let h='';
+  slots.forEach(s=>{
+    if(s.estado==='cont')return;
+    const dur=s.turno?durServicio(s.turno.servicioId):S.agenda.duracion;
+    let body='';
+    if(s.estado==='reservado'){
+      const t=s.turno;
+      body=`<div class="title">${esc(t.cliente.nombre)} <span class="chip r">Reservado</span></div>
+        <div class="meta"><b>${esc(servicio(t.servicioId).nombre)}</b> · DNI ${esc(t.cliente.dni)}${t.cliente.telefono?' · '+esc(t.cliente.telefono):''}</div>
+        <div class="acts">${t.cliente.telefono?`<button class="btn g" data-wa="${t.id}">WhatsApp</button>`:''}
+          <button class="btn d" data-cancel="${t.id}">Cancelar turno</button></div>`;
+    }else if(s.estado==='bloqueado'){
+      body=`<div class="title">Bloqueado <span class="chip b">Sin atención</span></div>
+        <div class="acts">${diaCerrado(sel)?'<div class="meta">El día completo está cerrado.</div>':`<button class="btn" data-unblock="${s.hora}">Liberar</button>`}</div>`;
+    }else{
+      body=`<div class="title" style="color:var(--ink3);font-weight:500">Libre</div>
+        ${s.pasado?'<div class="meta">Ya pasó</div>':`<div class="acts"><button class="btn p" data-new="${s.hora}">Cargar turno</button>
+          <button class="btn" data-block="${s.hora}">Bloquear</button></div>`}`;
+    }
+    h+=`<article class="slot ${s.estado} ${s.pasado?'pasado':''}"><span class="rail"></span>
+      <div class="t"><span class="hh">${s.hora}</span><span class="dur">${dur}′</span></div>
+      <div class="body">${body}</div></article>`;
+  });
+  box.innerHTML=h;
+  renderCancelados(box);
+}
+function renderCancelados(box){
+  const cs=S.turnos.filter(t=>t.fecha===sel&&t.estado==='cancelado');
+  if(!cs.length)return;
+  let h='<div style="height:14px"></div><div class="eyebrow" style="margin-bottom:8px">Cancelados</div>';
+  cs.forEach(t=>{
+    h+=`<article class="slot cancelado" style="margin-bottom:8px"><span class="rail"></span>
+      <div class="t"><span class="hh">${t.hora}</span></div>
+      <div class="body"><div class="title">${esc(t.cliente.nombre)} <span class="chip c">Cancelado</span></div>
+        <div class="meta">${esc(servicio(t.servicioId).nombre)}${t.motivo?' · Motivo: '+esc(t.motivo):''}</div>
+        <div class="acts">${t.cliente.telefono?`<button class="btn g" data-remsg="${t.id}">Reenviar aviso</button>`:''}
+          <button class="btn" data-del="${t.id}">Quitar</button></div></div></article>`;
+  });
+  box.insertAdjacentHTML('beforeend',h);
+}
+function renderHorarios(){
+  $('#cfgDur').value=S.agenda.duracion;$('#cfgAnt').value=S.agenda.anticipacion;
+  let h='';
+  for(let i=1;i<=7;i++){
+    const d=i%7,rs=S.agenda.dias[d]||[],abierto=rs.length>0;
+    h+=`<div class="dayrow"><div class="dayhead"><span class="nm">${DOW[d]}</span>
+      <button class="sw ${abierto?'on':''}" data-toggleday="${d}"></button></div>`;
+    if(abierto){
+      h+='<div class="ranges">';
+      rs.forEach((r,ix)=>{h+=`<div class="range">
+        <input type="time" value="${r.de}" data-rd="${d}" data-ri="${ix}" data-rf="de">
+        <span class="to">a</span>
+        <input type="time" value="${r.a}" data-rd="${d}" data-ri="${ix}" data-rf="a">
+        <button class="x" data-delrange="${d}:${ix}">×</button></div>`});
+      h+=`</div><button class="addr" data-addrange="${d}">+ Agregar rango</button>`;
+    }
+    h+='</div>';
+  }
+  $('#daysCfg').innerHTML=h;
+  $('#blockedList').innerHTML=S.bloqueos.dias.length
+    ? S.bloqueos.dias.slice().sort().map(f=>`<span class="bpill">${fmtLargo(f)}<button data-unblockday="${f}">×</button></span>`).join('')
+    : '<span class="tag" style="margin-top:8px">Ninguna fecha cerrada</span>';
+}
+function renderServicios(){
+  const base=S.agenda.duracion,opts=[0,15,20,30,45,60,90,120];
+  $('#srvList').innerHTML=S.servicios.map(s=>`
+    <div class="srv"><div>
+      <input type="text" value="${esc(s.nombre)}" data-srvname="${s.id}" placeholder="Nombre del servicio">
+      <div class="sub">
+        <select data-srvdur="${s.id}">${opts.map(o=>`<option value="${o}" ${s.duracion==o?'selected':''}>${o===0?'Duración base ('+base+'′)':o+' minutos'}</option>`).join('')}</select>
+        <input type="text" value="${esc(s.precio)}" data-srvprice="${s.id}" placeholder="Precio (opcional)">
+      </div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:center;padding-top:4px">
+        <button class="sw ${s.activo?'on':''}" data-srvon="${s.id}"></button>
+        ${S.servicios.length>1?`<button class="x" data-srvdel="${s.id}">×</button>`:''}
+      </div></div>`).join('')||'<div class="hint">Todavía no hay servicios cargados.</div>';
+}
+function renderAjustes(){
+  $('#setName').value=S.negocio.nombre;$('#setPhone').value=S.negocio.telefono;$('#setUrl').value=S.negocio.url;
+}
+function renderAll(){
+  $('#bizName').textContent=S.negocio.nombre||'Mi comercio';
+  renderStrip();renderAgenda();
+  if(!focusIn('#daysCfg'))renderHorarios();
+  if(!focusIn('#srvList'))renderServicios();
+  if(!focusIn('#v-ajustes'))renderAjustes();
+}
+
+/* ================= MODALES ================= */
+function openSheet(html){$('#sheet').innerHTML='<div class="grab"></div>'+html;$('#scrim').classList.add('open')}
+function closeSheet(){$('#scrim').classList.remove('open')}
+$('#scrim').addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet()});
+
+function sheetNuevo(hora){
+  const libres=generarSlots(sel).filter(s=>s.estado==='libre'&&!s.pasado).map(s=>s.hora);
+  if(!libres.length){toast('No hay horarios libres en este día');return}
+  const activos=S.servicios.filter(s=>s.activo);
+  if(!activos.length){toast('Activá al menos un servicio');return}
+  const h0=hora&&libres.includes(hora)?hora:libres[0];
+  openSheet(`<h2>Cargar turno</h2><div class="sub">${fmtLargo(sel)}</div>
+    <div class="row2">
+      <div class="field"><label>Hora</label><select id="nHora">${libres.map(x=>`<option ${x===h0?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label>Servicio</label><select id="nSrv">${activos.map(s=>`<option value="${s.id}">${esc(s.nombre)}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Nombre y apellido</label><input type="text" id="nNom" placeholder="Ana Gómez"></div>
+    <div class="row2">
+      <div class="field"><label>DNI</label><input type="text" inputmode="numeric" id="nDni" placeholder="30111222"></div>
+      <div class="field"><label>Teléfono</label><input type="tel" id="nTel" placeholder="3624 000000"></div>
+    </div>
+    <button class="btn full p" id="nOk">Guardar turno</button>`);
+  $('#nOk').onclick=async()=>{
+    const nom=$('#nNom').value.trim(),dni=$('#nDni').value.trim();
+    if(!nom||!dni){toast('Falta el nombre o el DNI');return}
+    $('#nOk').disabled=true;
+    const hora=$('#nHora').value,srv=$('#nSrv').value;
+    try{
+      const ref=doc(db,'turnos',idTurno(sel,hora));
+      if((await getDoc(ref)).exists()){toast('Ese horario ya está tomado');$('#nOk').disabled=false;return}
+      const t={fecha:sel,hora,servicioId:srv,
+        cliente:{nombre:nom,dni,telefono:$('#nTel').value.trim()},
+        estado:'reservado',origen:'comercio',creado:Date.now()};
+      await setDoc(ref,t);
+      await ocuparSlots(sel,slotsQueOcupa(t));
+      closeSheet();toast('Turno cargado');
+    }catch(e){errW(e);$('#nOk').disabled=false}
+  };
+}
+
+const MOTIVOS=['Imprevisto personal','Problema de salud','Corte de luz / agua','Feriado o cierre','Sobreturno duplicado'];
+function mensajeCancelacion(t,motivo){
+  const link=S.negocio.url?(S.negocio.url+(S.negocio.url.includes('?')?'&':'?')+'reprogramar='+t.id)
+    :'(cargá el link de la app del cliente en Ajustes)';
+  return `Hola ${t.cliente.nombre}, te escribimos de ${S.negocio.nombre||'nuestro comercio'}.\n\n`+
+    `Tenemos que cancelar tu turno del ${fmtLargo(t.fecha)} a las ${t.hora} (${servicio(t.servicioId).nombre}).\n`+
+    `Motivo: ${motivo}.\n\nTe pedimos disculpas por el inconveniente. Podés elegir un nuevo horario acá:\n${link}`;
+}
+function sheetCancelar(id){
+  const t=S.turnos.find(x=>x.id===id);if(!t)return;
+  let motivo=MOTIVOS[0];
+  const draw=()=>{
+    openSheet(`<h2>Cancelar turno</h2>
+      <div class="sub">${esc(t.cliente.nombre)} · ${fmtLargo(t.fecha)} a las ${t.hora}</div>
+      <div class="eyebrow" style="margin-bottom:8px">Motivo</div>
+      <div class="chips">${MOTIVOS.map(m=>`<button class="rchip ${m===motivo?'on':''}" data-m="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+      <div class="field"><label>Otro motivo</label><input type="text" id="cOtro" placeholder="Escribilo con tus palabras" value="${MOTIVOS.includes(motivo)?'':esc(motivo)}"></div>
+      <div class="eyebrow" style="margin-bottom:8px">Mensaje que recibe el cliente</div>
+      <div class="preview" id="cPrev">${esc(mensajeCancelacion(t,motivo))}</div>
+      <div class="stack">
+        ${t.cliente.telefono?'<button class="btn full g" id="cWa">Cancelar y enviar por WhatsApp</button>':''}
+        <button class="btn full" id="cCopy">Cancelar y copiar el mensaje</button>
+        <button class="btn full" id="cNo" style="background:transparent;border-color:transparent;color:var(--ink2)">Volver</button>
+      </div>`);
+    $('#sheet').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{motivo=b.dataset.m;draw()});
+    $('#cOtro').oninput=e=>{motivo=e.target.value.trim()||MOTIVOS[0];$('#cPrev').textContent=mensajeCancelacion(t,motivo)};
+    $('#cNo').onclick=closeSheet;
+    // se archiva en otro documento para que el horario vuelva a quedar libre
+    const doCancel=async()=>{
+      try{
+        const copia=Object.assign({},t);delete copia.id;
+        await setDoc(doc(db,'turnos',t.id+'_c'+Date.now().toString(36)),
+          Object.assign(copia,{estado:'cancelado',motivo,canceladoEn:Date.now()}));
+        await deleteDoc(doc(db,'turnos',t.id));
+        await liberarSlots(t.fecha,slotsQueOcupa(t));
+      }catch(e){errW(e)}
+    };
+    $('#cCopy').onclick=async()=>{
+      const msg=mensajeCancelacion(t,motivo);await doCancel();
+      try{await navigator.clipboard.writeText(msg);toast('Turno cancelado · mensaje copiado')}catch(e){toast('Turno cancelado')}
+      closeSheet();
+    };
+    if($('#cWa'))$('#cWa').onclick=async()=>{
+      const msg=mensajeCancelacion(t,motivo),w=window.open('','_blank');
+      await doCancel();closeSheet();
+      if(w)w.location=waLink(t.cliente.telefono,msg);
+    };
+  };
+  draw();
+}
+
+/* ================= EVENTOS ================= */
+$('#strip').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;sel=b.dataset.d;renderStrip();renderAgenda()});
+$('#btnToday').onclick=()=>{sel=iso(new Date());renderStrip();renderAgenda()};
+
+$('#slots').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+  if(d.block){S.bloqueos.slots.push(sel+'|'+d.block);pushBloqueos();renderAgenda();toast('Horario bloqueado')}
+  else if(d.unblock){S.bloqueos.slots=S.bloqueos.slots.filter(x=>x!==sel+'|'+d.unblock);pushBloqueos();renderAgenda();toast('Horario liberado')}
+  else if(d.new)sheetNuevo(d.new);
+  else if(d.cancel)sheetCancelar(d.cancel);
+  else if(d.wa){const t=S.turnos.find(x=>x.id===d.wa);
+    window.open(waLink(t.cliente.telefono,`Hola ${t.cliente.nombre}, te recordamos tu turno del ${fmtLargo(t.fecha)} a las ${t.hora} en ${S.negocio.nombre||'nuestro comercio'}.`),'_blank')}
+  else if(d.remsg){const t=S.turnos.find(x=>x.id===d.remsg);window.open(waLink(t.cliente.telefono,mensajeCancelacion(t,t.motivo||'Imprevisto')),'_blank')}
+  else if(d.del){if(confirm('¿Quitar este turno del historial?'))deleteDoc(doc(db,'turnos',d.del)).catch(errW)}
+});
+$('#btnBlockDay').onclick=()=>{
+  if(diaCerrado(sel)){S.bloqueos.dias=S.bloqueos.dias.filter(f=>f!==sel);toast('Día reabierto')}
+  else{S.bloqueos.dias.push(sel);toast('Día bloqueado')}
+  pushBloqueos();renderStrip();renderAgenda();renderHorarios();
+};
+$('#btnNewApt').onclick=()=>sheetNuevo(null);
+
+$('#cfgDur').onchange=e=>{S.agenda.duracion=+e.target.value;pushAgenda();renderAgenda();renderServicios()};
+$('#cfgAnt').onchange=e=>{S.agenda.anticipacion=+e.target.value;pushAgenda();renderStrip()};
+$('#daysCfg').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+  if(d.toggleday!==undefined){const k=+d.toggleday;S.agenda.dias[k]=S.agenda.dias[k].length?[]:[{de:'09:00',a:'13:00'}];pushAgenda()}
+  else if(d.addrange!==undefined){S.agenda.dias[+d.addrange].push({de:'16:00',a:'20:00'});pushAgenda()}
+  else if(d.delrange){const[k,ix]=d.delrange.split(':').map(Number);S.agenda.dias[k].splice(ix,1);pushAgenda()}
+  else if(d.unblockday){S.bloqueos.dias=S.bloqueos.dias.filter(f=>f!==d.unblockday);pushBloqueos()}
+  else return;
+  renderHorarios();renderStrip();renderAgenda();
+});
+$('#daysCfg').addEventListener('change',e=>{
+  const i=e.target;if(!i.dataset.rd)return;
+  S.agenda.dias[+i.dataset.rd][+i.dataset.ri][i.dataset.rf]=i.value;pushAgenda();renderAgenda();
+});
+$('#addBlockDate').onchange=e=>{
+  if(!e.target.value)return;
+  if(!S.bloqueos.dias.includes(e.target.value))S.bloqueos.dias.push(e.target.value);
+  e.target.value='';pushBloqueos();renderHorarios();renderStrip();renderAgenda();toast('Día cerrado');
+};
+
+$('#srvList').addEventListener('input',e=>{
+  const d=e.target.dataset;
+  if(d.srvname){const s=servicio(d.srvname);s.nombre=e.target.value;pushServicio(s)}
+  else if(d.srvprice){const s=servicio(d.srvprice);s.precio=e.target.value;pushServicio(s)}
+});
+$('#srvList').addEventListener('change',e=>{
+  const d=e.target.dataset;if(!d.srvdur)return;
+  const s=servicio(d.srvdur);s.duracion=+e.target.value;pushServicio(s);renderAgenda();
+});
+$('#srvList').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+  if(d.srvon){const s=servicio(d.srvon);s.activo=!s.activo;pushServicio(s);renderServicios()}
+  else if(d.srvdel){if(confirm('¿Eliminar este servicio?'))deleteDoc(doc(db,'servicios',d.srvdel)).catch(errW)}
+});
+$('#btnAddSrv').onclick=()=>{
+  const id='s'+Date.now().toString(36);
+  setDoc(doc(db,'servicios',id),{nombre:'Servicio '+(S.servicios.length+1),duracion:0,precio:'',activo:true,orden:S.servicios.length}).catch(errW);
+};
+
+['setName','setPhone','setUrl'].forEach(id=>{
+  $('#'+id).addEventListener('input',e=>{
+    S.negocio[{setName:'nombre',setPhone:'telefono',setUrl:'url'}[id]]=e.target.value;
+    $('#bizName').textContent=S.negocio.nombre||'Mi comercio';pushNegocio();
+  });
+});
+$('#btnExport').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));
+  a.download='turnero-'+iso(new Date())+'.json';a.click();
+};
+$('#btnRebuild').onclick=async()=>{
+  $('#btnRebuild').disabled=true;
+  try{await reconstruirDisponibilidad()}catch(e){errW(e)}
+  $('#btnRebuild').disabled=false;
+};
+$('#btnOut').onclick=()=>signOut(auth).then(()=>location.reload());
+
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    $('#v-'+b.dataset.tab).classList.add('on');
+    const esAgenda=b.dataset.tab==='agenda';
+    $('#strip').style.display=esAgenda?'flex':'none';
+    $('#btnToday').style.display=esAgenda?'block':'none';
+    window.scrollTo({top:0});
+  };
+});
+addEventListener('scroll',()=>$('#hdr').classList.toggle('scrolled',scrollY>4));
+
+/* ================= ARRANQUE ================= */
+function gate(html){$('#gate').classList.add('on');$('#gateBody').innerHTML=html}
+function cerrarGate(){$('#gate').classList.remove('on')}
+
+function pantallaLogin(err){
+  gate(`<div class="logo">T</div><h2>Entrar al panel</h2>
+    <p class="lead">Usá la cuenta de administrador que creaste en Firebase Authentication.</p>
+    ${err?`<div class="err">${esc(err)}</div>`:''}
+    <div class="card">
+      <div class="field"><label>Email</label><input type="email" id="lgMail" autocomplete="username"></div>
+      <div class="field" style="margin-bottom:14px"><label>Contraseña</label><input type="password" id="lgPass" autocomplete="current-password"></div>
+      <button class="btn full p" id="lgBtn">Entrar</button>
+    </div>`);
+  const go=async()=>{
+    $('#lgBtn').disabled=true;
+    try{await signInWithEmailAndPassword(auth,$('#lgMail').value.trim(),$('#lgPass').value)}
+    catch(e){
+      const m={'auth/invalid-credential':'Email o contraseña incorrectos.',
+        'auth/invalid-email':'Ese email no tiene un formato válido.',
+        'auth/too-many-requests':'Demasiados intentos. Probá de nuevo en unos minutos.',
+        'auth/network-request-failed':'Sin conexión con Firebase.'}[e.code]||e.message;
+      pantallaLogin(m);
+    }
+  };
+  $('#lgBtn').onclick=go;
+  $('#lgPass').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+
+function marcarListo(){
+  listos++;
+  if(listos>=4){$('#sync').classList.remove('off');$('#syncTxt').textContent='sincronizado'}
+}
+function sembrarServicios(){
+  if(sembrado)return;sembrado=true;
+  [1,2,3,4,5].forEach(n=>setDoc(doc(db,'servicios','s'+n),
+    {nombre:'Servicio '+n,duracion:0,precio:'',activo:true,orden:n}).catch(errW));
+}
+function suscribir(){
+  const hace=new Date();hace.setDate(hace.getDate()-7);
+  onSnapshot(doc(db,'config','negocio'),s=>{if(s.exists())S.negocio=Object.assign(S.negocio,s.data());marcarListo();renderAll()},errW);
+  onSnapshot(doc(db,'config','agenda'),s=>{if(s.exists())S.agenda=Object.assign(S.agenda,s.data());marcarListo();renderAll()},errW);
+  onSnapshot(doc(db,'config','bloqueos'),s=>{if(s.exists())S.bloqueos=Object.assign({slots:[],dias:[]},s.data());marcarListo();renderAll()},errW);
+  onSnapshot(collection(db,'servicios'),s=>{
+    S.servicios=s.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(a.orden||0)-(b.orden||0));
+    if(!S.servicios.length&&!s.metadata.fromCache)sembrarServicios();
+    marcarListo();renderAll();
+  },errW);
+  onSnapshot(query(collection(db,'turnos'),where('fecha','>=',iso(hace))),s=>{
+    S.turnos=s.docs.map(d=>Object.assign({id:d.id},d.data()));renderStrip();renderAgenda();
+  },errW);
+}
+
+if(!firebaseConfig.apiKey){
+  gate(`<div class="logo">T</div><h2>Falta conectar Firebase</h2>
+    <p class="lead">Abrí este archivo con un editor de texto y pegá los datos de tu proyecto
+    en el bloque <code>firebaseConfig</code>, arriba de todo dentro de
+    <code>&lt;script type="module"&gt;</code>.</p>
+    <div class="card"><h3>Dónde encontrarlos</h3>
+      <div class="hint" style="margin:0">Consola de Firebase → ⚙ Configuración del proyecto →
+      Tus apps → app web → Configuración del SDK → Config.</div></div>`);
+}else{
+  const app=initializeApp(firebaseConfig);
+  auth=getAuth(app);
+  try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}
+  catch(e){db=getFirestore(app)}
+  onAuthStateChanged(auth,u=>{
+    if(u){$('#acctMail').textContent='Sesión iniciada como '+u.email;cerrarGate();suscribir()}
+    else pantallaLogin();
+  });
+}
+</script>
+</body>
+</html>
